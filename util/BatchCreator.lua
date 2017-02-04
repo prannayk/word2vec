@@ -1,10 +1,10 @@
-require 'path'
+--require 'path'
 require 'lfs'
-require 'torch'
+--require 'torch'
 
-local BatchCreator = torch.class('word2vec.util.BatchCreator') 
-
-function BatchCreator:__init(data_dir, num_batches, train_frac, test_frac, valid_frac)
+--local BatchCreator = torch.class('word2vec.util.BatchCreator') 
+local BatchCreator = {}
+function BatchCreator:__init(data_dir, filename, num_batches, train_frac, test_frac, valid_frac)
 	local self = {}
 	setmetatable(self, BatchCreator)
 	self.file = filename
@@ -22,10 +22,12 @@ function BatchCreator:checkLoadedVectors(filename)
 		print("Have to preprocess!")
 		createVocab()
 		return 1
-	else (path.exists(vocab_file))
-		print("Have to build tensors")
-		createTensor()
-		return 1
+	else 
+        if (path.exists(vocab_file)) then
+		    print("Have to build tensors")
+		    createTensor()
+		    return 1
+        end
 	end	
 	input_attr = lfs.attributes(input_file)
 	vocab_attr = lfs.attributes(vocab_file)
@@ -40,13 +42,14 @@ function BatchCreator:createVocab()
 	token_set = tokenize()
 end
 
-function BatchCreater:tokenize()
+function BatchCreator:tokenize()
 	local rawdata
     local token_list
 	local tot_len = 0
     local escape_chars = {";",",","!","'","\""}
     local seperate_stuff = {" : ","http://"}
-	local f = assert(io.open(self.file, "r"))
+--	local f = assert(io.open(self.file, "r"))
+    f = "some\n lsdjf klsjdf fmsld. Mr. flj sir. Dr. sdkj sdlkfj sdf! 'sdasdas' sdf..df..sdf\n prannayk@iitk.ac.in"
 	while(1) do
 		rawdata = f:read("*line")
 		s = rawdata
@@ -54,7 +57,7 @@ function BatchCreater:tokenize()
 		for i=1,#escape_chars do
 			s,_ = string.gsub(s,escape_chars[i]," . ")
 		end
-		for i=1.#seperate_stuff do
+		for i=1,#seperate_stuff do
 			s,_ = string.gsub(s,seperate_stuff[i]," "..seperate_stuff[i].." ")
 		end
         for i in s:gmatch("%S+") do 
@@ -78,7 +81,7 @@ function BatchCreater:tokenize()
                 add = true
             end
             if add then
-                if token_list[i] != nil then
+                if token_list[i] ~= nil then
                     token_list[i] = token_list + 1
                 else
                     token_list[i] = 1
