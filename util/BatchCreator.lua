@@ -1,9 +1,9 @@
---require 'path'
+-- require 'path'
 require 'lfs'
---require 'torch'
+require 'torch'
 
---local BatchCreator = torch.class('word2vec.util.BatchCreator') 
-local BatchCreator = {}
+local BatchCreator = torch.class('word2vec.util.BatchCreator') 
+-- local BatchCreator = {}
 function BatchCreator:__init(data_dir, filename, num_batches, train_frac, test_frac, valid_frac)
 	local self = {}
 	setmetatable(self, BatchCreator)
@@ -40,17 +40,21 @@ end
 
 function BatchCreator:createVocab()
 	token_set = tokenize()
+	
 end
 
-function BatchCreator:tokenize()
+function BatchCreator::tokenize()
 	local rawdata
-    local token_list
+    token_list = {}
 	local tot_len = 0
     local escape_chars = {";",",","!","'","\""}
     local seperate_stuff = {" : ","http://"}
---	local f = assert(io.open(self.file, "r"))
-    f = "some\n lsdjf klsjdf fmsld. Mr. flj sir. Dr. sdkj sdlkfj sdf! 'sdasdas' sdf..df..sdf\n prannayk@iitk.ac.in"
-	while(1) do
+    local abbrev = {"Mr.", "Mrs.", "Dr."}
+    for _,i in ipairs(abbrev) do
+        abbrev[i] = true
+    end
+	local f = assert(io.open(self.file, "r"))
+    while(1) do
 		rawdata = f:read("*line")
 		s = rawdata
 		if not rawdata then break end
@@ -70,19 +74,22 @@ function BatchCreator:tokenize()
             end
             local add = false
             if count > 1 then
-                if abbrev[i]==true then
+                if i:match("^[%w.]+@[%w+%.]*%w+$") or i:match("^[%w+%.]*%.%w+$") then 
                     add = true
-                else
-                    if i:match("^[%w.]+@%w+.%.[%a%d]+$") or i:match("^[%w.]*%[%a%d]+$") then 
-                        add = true
-                    end 
-                end
+                end 
             else
-                add = true
+                if count ~= 0 then
+                    if i:match("^[a-zA-Z0-9]*$") then
+                        add = true
+                    end
+                    if abbrev[i] then
+                        add = true
+                    end
+                end
             end
             if add then
                 if token_list[i] ~= nil then
-                    token_list[i] = token_list + 1
+                    token_list[i] = token_list[i] + 1
                 else
                     token_list[i] = 1
                 end
