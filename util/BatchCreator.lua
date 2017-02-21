@@ -18,6 +18,9 @@ function BatchCreator:checkLoadedVectors(filename)
 	input_file = path.join(data_dir,"input.t7" )
 	vocab_file = path.join(data_dir, "vocab.t7")
 	tensor_file = path.join(data_dir, "data.t7")
+    self.input_file = input_file
+    self.vocab_file = vocab_file
+    self.tensor_file = tensor_file
 	if not (path.exists(vocab_file) and path.exists(tensor_file)) then
 		print("Have to preprocess!")
 		createVocab()
@@ -38,9 +41,56 @@ function BatchCreator:checkLoadedVectors(filename)
 	end
 end
 
+function binary(number, size)
+    s = torch.Tensor(size)
+    this_number = number
+    for i=1,size do
+        if(this_number%2 > 0) then
+            s[1] = 1
+        end
+        this_number = math.floor(this.number/2)
+    end
+    return s
+end
+
+function BatchCreator::createTensor()
+    token_count = self.token_count
+    vector_list = {}
+    vector_mapping = {}
+    self.logsize = 1 + math.floor(math.log(#token_count))
+    for k,v in pairs(token_count) do
+        vector_list[k] = binary(1, self.logsize)
+        vector_mapping[vector_list[k]] = v
+    end
+    self.vector_list = vector_list
+    self.vector_mapping = vector_mapping
+    vector = {}
+    vect.vector_list = vector_list
+    vect.vector_mapping = vector_mapping
+    torch.save(self.tensor_file,vect)
+end
+
 function BatchCreator:createVocab()
-	token_set = tokenize()
-	
+	tokenize()
+    token_list = self.token_list
+    token_count = {}
+    for i,#token_list do
+        if token_count[token_list[i]] ~= nil then
+            token_count[token_list[i]] = token_count[token_list[i]] + 1
+        else
+            token_count[token_list[i]] = 1
+        end
+    end
+    token_count["UNK"] = 1
+    for k,v in pairs(token_count) do
+        if v < self.min_count then
+            token_count[k] = nil
+            token_count["UNK"] = token_count["UNK"] + v
+        end
+    end
+    self.token_list = token_list
+    torch.save(self.vocab_file,token_list)
+    createTensor()
 end
 
 function BatchCreator::tokenize()
@@ -53,7 +103,7 @@ function BatchCreator::tokenize()
     for _,i in ipairs(abbrev) do
         abbrev[i] = true
     end
-	local f = assert(io.open(self.file, "r"))
+	local f = assert(io.open(self.input_file, "r"))
     while(1) do
 		rawdata = f:read("*line")
 		s = rawdata
