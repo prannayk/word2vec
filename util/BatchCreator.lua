@@ -148,3 +148,47 @@ function BatchCreator::tokenize()
 	end
     self.token_list = token_list
 end
+
+function BatchCreator:createBatch()
+    skip_window = self.skip_window or 2
+    vector_list = self.vector_list
+    linedata = self.linedata
+    linevectors = {}
+    for i=1,#linedata do
+        s = {}
+        for j=1,skip_window do 
+            s[#s + 1] = vector_list["UNK"]
+        end
+        for j=1,#linedata[i] do
+            s[#s+1] = vector_size[linedata[i][j]]
+        end
+        for j=1,skip_window do 
+            s[#s + 1] = vector_list["UNK"]
+        end
+        linevectors[#linevectors + 1] = s
+    end
+    self.batches = linevectors
+end
+
+function BatchCreator:nextBatch(batch_size, num_lines)
+    local lines = self.lines
+    local chooser_lines = {}
+    batch = {}
+    for i=1,num_lines do
+        rand = math.floor(math.random()*(#lines))
+        choosen_lines[#choosen_lines + 1] = lines[rand]
+    end
+    for i=1,#choosen_lines do
+        if #batch > batch_size then break end
+        for j=skip_window+1,#choosen_lines[i] - skip_window do
+            batchvectors = {}
+            for k=1,skip_window do
+                batchvectors[#batchvectors + 1] = choosen_lines[i-k]
+                batchvectors[#batchvectors + 1] = choosen_lines[i+k]
+            end
+            batch[choosen_lines[i][j]] = batchvectors
+        end
+    end
+    batch = subrange(batch,1,batch_size)
+    return batch
+end
