@@ -1,21 +1,22 @@
 -- require 'path'
 require 'lfs'
-require 'torch'
+require 'nn'
 
-local BatchCreator = torch.class('word2vec.util.BatchCreator') 
--- local BatchCreator = {}
-function BatchCreator:__init(data_dir, filename, num_batches, train_frac, test_frac, valid_frac)
+--local BatchCreator = torch.class('util.BatchCreator') 
+local BatchCreator = {}
+function BatchCreator:__init(input_params)
 	local self = {}
 	setmetatable(self, BatchCreator)
-	self.file = filename
-	self.num_batches = num_batches
-	self.train_frac = train_frac
-	self.test_frac = test_frac
-	self.valid_frac = math.maximum(valid_frac,1 - train_frac - test_frac)
+	self.inputfile = input_params.intputFile
+    self.vocabfile = input_params.vocabFile
+    self.tensorfile = input_params.tensorFile
+	self.train_frac = input_params.train_frac
+	self.test_frac = input_params.test_frac
+	self.valid_frac = math.maximum(input_params.valid_frac,1 - train_frac - test_frac)
 end
 
 function BatchCreator:checkLoadedVectors(filename)
-	input_file = path.join(data_dir,"input.t7" )
+	input_file = path.join(data_dir,self.file )
 	vocab_file = path.join(data_dir, "vocab.t7")
 	tensor_file = path.join(data_dir, "data.t7")
     self.input_file = input_file
@@ -53,7 +54,7 @@ function binary(number, size)
     return s
 end
 
-function BatchCreator::createTensor()
+function BatchCreator:createTensor()
     token_count = self.token_count
     vector_list = {}
     vector_mapping = {}
@@ -74,7 +75,7 @@ function BatchCreator:createVocab()
 	tokenize()
     token_list = self.token_list
     token_count = {}
-    for i,#token_list do
+    for i=1,#token_list do
         if token_count[token_list[i]] ~= nil then
             token_count[token_list[i]] = token_count[token_list[i]] + 1
         else
@@ -93,7 +94,7 @@ function BatchCreator:createVocab()
     createTensor()
 end
 
-function BatchCreator::tokenize()
+function BatchCreator:tokenize()
 	local rawdata
     token_list = {}
 	local tot_len = 0
@@ -170,9 +171,26 @@ function BatchCreator:createBatch()
     self.batches = linevectors
 end
 
-function BatchCreator:nextBatch(batch_size, num_lines)
-    local lines = self.lines
-    local chooser_lines = {}
+function BatchCreator:divideBatches()
+    local batchLines = self.batches
+    local trainNum = math.floor(self.train_frac*#batchLines)
+    local validNum = math.floor(self.valid_frac*#batchLines)
+    local testNum = #batchLines - trainNum - validNum
+    self.trainBatches = subrange(batchLines,1,trainNum)
+    self.validNum = subrange(batchLines,trainNum+1,trainNum+validNum)
+    self.testNum = subrange(batchLines, trainNum+validNum+1,#batchLines)
+end
+
+function BatchCreator:nextBatch(batch_size, num_lines, batchType)
+    local lines
+    if batchType == 1 then lines = self.trainBatches else 
+        if batchType == 2 then 
+            lines = self.validBatches
+        else 
+            lines = self.testBatches
+        end
+    end
+    local choosen_lines = {}
     batch = {}
     for i=1,num_lines do
         rand = math.floor(math.random()*(#lines))
@@ -192,3 +210,5 @@ function BatchCreator:nextBatch(batch_size, num_lines)
     batch = subrange(batch,1,batch_size)
     return batch
 end
+
+return BatchCreator
