@@ -19,10 +19,11 @@ input_params = {
 
 print("Loaded dependencies")
 
-local batch = require 'util.BatchCreator'
+local BatchCreator = require 'util.BatchCreator'
 print(input_params)
-batch:create(input_params)
-batch:checkLoadedVectors(:wq)
+batch = BatchCreator.create(input_params)
+print(batch)
+batch:checkLoadedVectors()
 print(some)
 --BatchCreator:checkLoadedVectors()
 

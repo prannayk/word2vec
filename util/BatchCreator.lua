@@ -3,9 +3,9 @@ require 'lfs'
 require 'nn'
 
 --local BatchCreator = torch.class('util.BatchCreator') 
-local BatchCreator = {}
+BatchCreator = {}
 BatchCreator.__index = BatchCreator
-function BatchCreator.create(self,input_params)
+function BatchCreator.create(input_params)
 	local self = {}
 	setmetatable(self, BatchCreator)
 	self.inputfile = input_params.input_file
@@ -15,11 +15,10 @@ function BatchCreator.create(self,input_params)
     self.test_frac = input_params.test_frac
 	self.valid_frac = math.max(input_params.valid_frac,1 - self.train_frac - self.test_frac)
     self.data_dir = input_params.data_dir
-    collectgarbage()
     return self
 end
 
-function BatchCreator:checkLoadedVectors(self)
+function BatchCreator:checkLoadedVectors()
     local data_dir = self.data_dir
     print(self.data_dir)
 	input_file = path.join(self.data_dir,self.inputfile )
@@ -30,12 +29,12 @@ function BatchCreator:checkLoadedVectors(self)
     self.tensor_file = tensor_file
 	if not (path.exists(vocab_file) and path.exists(tensor_file)) then
 		print("Have to preprocess!")
-		BatchCreator.createVocab(self)
+		self:createVocab()
 		return 1
 	else 
         if (path.exists(vocab_file)) then
 		    print("Have to build tensors")
-		    BatchCreator.createTensor(self)
+		    BatchCreator.createTensor()
 		    return 1
         end
 	end	
@@ -60,7 +59,7 @@ function binary(number, size)
     return s
 end
 
-function BatchCreator:createTensor(self)
+function BatchCreator:createTensor()
     token_count = self.token_count
     vector_list = {}
     vector_mapping = {}
@@ -77,8 +76,9 @@ function BatchCreator:createTensor(self)
     torch.save(self.tensor_file,vect)
 end
 
-function BatchCreator:createVocab(self)
-	BatchCreator.tokenize()
+function BatchCreator:createVocab()
+    print(self)
+	self:tokenize()
     token_list = self.token_list
     token_count = {}
     for i=1,#token_list do
@@ -100,7 +100,7 @@ function BatchCreator:createVocab(self)
     createTensor()
 end
 
-function BatchCreator:tokenize(self)
+function BatchCreator:tokenize()
 	local rawdata
     token_list = {}
 	local tot_len = 0
@@ -156,7 +156,7 @@ function BatchCreator:tokenize(self)
     self.token_list = token_list
 end
 
-function BatchCreator:createBatch(self)
+function BatchCreator:createBatch()
     skip_window = self.skip_window or 2
     vector_list = self.vector_list
     linedata = self.linedata
@@ -177,7 +177,7 @@ function BatchCreator:createBatch(self)
     self.batches = linevectors
 end
 
-function BatchCreator:divideBatches(self)
+function BatchCreator:divideBatches()
     local batchLines = self.batches
     local trainNum = math.floor(self.train_frac*#batchLines)
     local validNum = math.floor(self.valid_frac*#batchLines)
