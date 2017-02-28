@@ -4,32 +4,38 @@ require 'nn'
 
 --local BatchCreator = torch.class('util.BatchCreator') 
 local BatchCreator = {}
-function BatchCreator:__init(input_params)
+BatchCreator.__index = BatchCreator
+function BatchCreator.create(self,input_params)
 	local self = {}
 	setmetatable(self, BatchCreator)
-	self.inputfile = input_params.intputFile
+	self.inputfile = input_params.input_file
     self.vocabfile = input_params.vocabFile
     self.tensorfile = input_params.tensorFile
 	self.train_frac = input_params.train_frac
-	self.test_frac = input_params.test_frac
-	self.valid_frac = math.maximum(input_params.valid_frac,1 - train_frac - test_frac)
+    self.test_frac = input_params.test_frac
+	self.valid_frac = math.max(input_params.valid_frac,1 - self.train_frac - self.test_frac)
+    self.data_dir = input_params.data_dir
+    collectgarbage()
+    return self
 end
 
-function BatchCreator:checkLoadedVectors(filename)
-	input_file = path.join(data_dir,self.file )
-	vocab_file = path.join(data_dir, "vocab.t7")
-	tensor_file = path.join(data_dir, "data.t7")
+function BatchCreator:checkLoadedVectors(self)
+    local data_dir = self.data_dir
+    print(self.data_dir)
+	input_file = path.join(self.data_dir,self.inputfile )
+	vocab_file = path.join(self.data_dir, "vocab.t7")
+	tensor_file = path.join(self.data_dir, "data.t7")
     self.input_file = input_file
     self.vocab_file = vocab_file
     self.tensor_file = tensor_file
 	if not (path.exists(vocab_file) and path.exists(tensor_file)) then
 		print("Have to preprocess!")
-		createVocab()
+		BatchCreator.createVocab(self)
 		return 1
 	else 
         if (path.exists(vocab_file)) then
 		    print("Have to build tensors")
-		    createTensor()
+		    BatchCreator.createTensor(self)
 		    return 1
         end
 	end	
@@ -41,7 +47,7 @@ function BatchCreator:checkLoadedVectors(filename)
 		return 1	
 	end
 end
-
+-- ** static method ** --
 function binary(number, size)
     s = torch.Tensor(size)
     this_number = number
@@ -54,7 +60,7 @@ function binary(number, size)
     return s
 end
 
-function BatchCreator:createTensor()
+function BatchCreator:createTensor(self)
     token_count = self.token_count
     vector_list = {}
     vector_mapping = {}
@@ -71,8 +77,8 @@ function BatchCreator:createTensor()
     torch.save(self.tensor_file,vect)
 end
 
-function BatchCreator:createVocab()
-	tokenize()
+function BatchCreator:createVocab(self)
+	BatchCreator.tokenize()
     token_list = self.token_list
     token_count = {}
     for i=1,#token_list do
@@ -94,7 +100,7 @@ function BatchCreator:createVocab()
     createTensor()
 end
 
-function BatchCreator:tokenize()
+function BatchCreator:tokenize(self)
 	local rawdata
     token_list = {}
 	local tot_len = 0
@@ -150,7 +156,7 @@ function BatchCreator:tokenize()
     self.token_list = token_list
 end
 
-function BatchCreator:createBatch()
+function BatchCreator:createBatch(self)
     skip_window = self.skip_window or 2
     vector_list = self.vector_list
     linedata = self.linedata
@@ -171,7 +177,7 @@ function BatchCreator:createBatch()
     self.batches = linevectors
 end
 
-function BatchCreator:divideBatches()
+function BatchCreator:divideBatches(self)
     local batchLines = self.batches
     local trainNum = math.floor(self.train_frac*#batchLines)
     local validNum = math.floor(self.valid_frac*#batchLines)
@@ -181,7 +187,7 @@ function BatchCreator:divideBatches()
     self.testNum = subrange(batchLines, trainNum+validNum+1,#batchLines)
 end
 
-function BatchCreator:nextBatch(batch_size, num_lines, batchType)
+function BatchCreator:nextBatch(batch_size, num_lines, batchType,self)
     local lines
     if batchType == 1 then lines = self.trainBatches else 
         if batchType == 2 then 

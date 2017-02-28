@@ -19,7 +19,11 @@ input_params = {
 
 print("Loaded dependencies")
 
-local BatchCreator = require 'util.BatchCreator'(input_params)
-BatchCreator:checkLoaded()
+local batch = require 'util.BatchCreator'
+print(input_params)
+batch:create(input_params)
+batch:checkLoadedVectors(:wq)
+print(some)
+--BatchCreator:checkLoadedVectors()
 
 print ("Loaded data, finished building Vocab and Tensors")
