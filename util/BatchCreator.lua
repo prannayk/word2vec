@@ -48,11 +48,12 @@ function BatchCreator:checkLoadedVectors()
 end
 -- ** static method ** --
 function binary(number, size)
-    s = torch.Tensor(size)
-    this_number = number
+    s = torch.Tensor(size):zero()
+    local this_number = number
     for i=1,size do
+        if this_number == 0 then break end
         if(this_number%2 > 0) then
-            s[1] = 1
+            s[i] = 1
         end
         this_number = math.floor(this.number/2)
     end
@@ -60,13 +61,14 @@ function binary(number, size)
 end
 
 function BatchCreator:createTensor()
-    token_count = self.token_count
+    token_count = self.token_list
     vector_list = {}
     vector_mapping = {}
     self.logsize = 1 + math.floor(math.log(#token_count))
+    local count = 0
     for k,v in pairs(token_count) do
         vector_list[k] = binary(1, self.logsize)
-        vector_mapping[vector_list[k]] = v
+        vector_mapping[vector_list[k]] = k
     end
     self.vector_list = vector_list
     self.vector_mapping = vector_mapping
@@ -78,31 +80,80 @@ end
 
 function BatchCreator:createVocab()
     print(self)
-	self:tokenize()
-    token_list = self.token_list
-    token_count = {}
-    for i=1,#token_list do
-        if token_count[token_list[i]] ~= nil then
-            token_count[token_list[i]] = token_count[token_list[i]] + 1
-        else
-            token_count[token_list[i]] = 1
-        end
+    if self.mode == 1 then
+    	self:tokenize()
+    else
+        self:readTokens()
     end
-    token_count["UNK"] = 1
-    for k,v in pairs(token_count) do
+    token_list = self.token_list
+    token_list["UNK"] = 1
+    for k,v in pairs(token_list) do
         if v < self.min_count then
-            token_count[k] = nil
-            token_count["UNK"] = token_count["UNK"] + v
+            token_list[k] = nil
+            token_lsit["UNK"] = token_list["UNK"] + v
         end
     end
     self.token_list = token_list
     torch.save(self.vocab_file,token_list)
-    createTensor()
+    self:createTensor()
+end
+
+function process(inputstring)
+    local i = 0
+    print(inputstring)
+    while(i <  #inputstring) do
+        print(inputstring:sub(#inputstring - i, #inputstring- i))
+        if inputstring:sub(#inputstring - i, #inputstring- i) == " " then
+            break
+        else
+            i = i+1
+        end
+    end
+    i = i+1
+    local outstring = {}
+    for j=1,(#inputstring-i) do
+        print(inputstring[j])
+        outstring[#outstring + 1] = inputstring[j]
+    end
+    print(outstring)
+    return i-1 , outstring
+end
+
+function subrange(list, input1, input2)
+    outlist = {}
+    for i=input1,input2 do
+        outlist[#outlist + 1] = list[i]
+    end
+    return outlist
+end
+
+function BatchCreator:readTokens()
+    local f = assert(io.open(self.input_file, "r"))
+    local rawdata
+    token_list = {}
+    linedata = {}
+    while(1) do
+        local num,rawdata = process(f:read(100))
+        f:seek("cur",-num)
+        print(rawdata)
+        if not rawdata then break end
+        linedata[#linedata + 1] = rawdata
+        for i=1,#rawdata do
+            if token_list[rawdata[i]] ~= nil then
+                token_list[rawdata[i]] = token_list[rawdata[i]] + 1
+            else 
+                token_list[rawdata[i]] = 1
+            end
+        end
+    end
+    self.linedata = linedata
+    self.token_list = token_list
 end
 
 function BatchCreator:tokenize()
 	local rawdata
     token_list = {}
+    linedata = {}
 	local tot_len = 0
     local escape_chars = {";",",","!","'","\""}
     local seperate_stuff = {" : ","http://"}
@@ -113,7 +164,8 @@ function BatchCreator:tokenize()
 	local f = assert(io.open(self.input_file, "r"))
     while(1) do
 		rawdata = f:read("*line")
-		s = rawdata
+	    local s = rawdata
+        linedata[#linedata + 1] = rawdata
 		if not rawdata then break end
 		for i=1,#escape_chars do
 			s,_ = string.gsub(s,escape_chars[i]," . ")
@@ -153,6 +205,7 @@ function BatchCreator:tokenize()
             end
         end
 	end
+    self.linedata = self.linedata
     self.token_list = token_list
 end
 
