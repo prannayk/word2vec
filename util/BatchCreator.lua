@@ -40,15 +40,15 @@ end
 
 function BatchCreator:createVocab()
 	token_set = tokenize()
-	
+
 end
 
 function BatchCreator::tokenize()
 	local rawdata
     token_list = {}
 	local tot_len = 0
-    local escape_chars = {";",",","!","'","\""}
-    local seperate_stuff = {" : ","http://"}
+    local escape_chars = {"'","\""}
+    local seperate_stuff = {":","http://","!",";",","}
     local abbrev = {"Mr.", "Mrs.", "Dr."}
     for _,i in ipairs(abbrev) do
         abbrev[i] = true
@@ -59,7 +59,7 @@ function BatchCreator::tokenize()
 		s = rawdata
 		if not rawdata then break end
 		for i=1,#escape_chars do
-			s,_ = string.gsub(s,escape_chars[i]," . ")
+			s,_ = string.gsub(s,escape_chars[i],"")
 		end
 		for i=1,#seperate_stuff do
 			s,_ = string.gsub(s,seperate_stuff[i]," "..seperate_stuff[i].." ")
